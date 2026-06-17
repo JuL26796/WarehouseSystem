@@ -1,0 +1,179 @@
+﻿@page "/materials"
+@using Warehouse.Shared.Models
+@inject HttpClient Http
+
+<h3 class="mb-4 text-primary">📋 Hệ Thống Quản Lý Vật Tư (Bản Web Client)</h3>
+
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-dark text-white fw-bold">📝 Thông tin chi tiết vật tư</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Mã Vật Tư</label>
+                <input type="text" class="form-control" @bind="materialForm.MaterialNo" disabled="@isEditMode" placeholder="VD: 24022" />
+            </div>
+            <div class="col-md-5">
+                <label class="form-label fw-bold">Tên Vật Tư</label>
+                <input type="text" class="form-control" @bind="materialForm.MaterialName" placeholder="Nhập tên vật tư..." />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Đơn Vị Tính</label>
+                <input type="text" class="form-control" @bind="materialForm.Unit" placeholder="VD: YD" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                @if (!isEditMode)
+                {
+                    <button class="btn btn-success w-100" @onclick="AddMaterial">➕ Thêm mới</button>
+                }
+                else
+                {
+                    <button class="btn btn-warning w-100 text-white" @onclick="UpdateMaterial">💾 Cập nhật</button>
+                    <button class="btn btn-secondary w-100" @onclick="CancelEdit">Hủy</button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(alertMessage))
+{
+    <div class="alert alert-@alertClass alert-dismissible fade show shadow-sm" role="alert">
+        @alertMessage
+        <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+    </div>
+}
+
+@if (materials == null)
+{
+    <div class="d-flex align-items-center justify-content-center p-5">
+        <div class="spinner-border text-primary me-2" role="status"></div>
+        <span>Đang đồng bộ dữ liệu từ WebService...</span>
+    </div>
+}
+else
+{
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-striped table-hover table-bordered mb-0 align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 15%">Mã Vật Tư</th>
+                    <th style="width: 50%">Tên Vật Tư</th>
+                    <th style="width: 15%">Đơn Vị Tính</th>
+                    <th style="width: 20%" class="text-center">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in materials)
+                {
+                    <tr>
+                        <td><strong>@item.MaterialNo</strong></td>
+                        <td>@item.MaterialName</td>
+                        <td><span class="badge bg-secondary">@item.Unit</span></td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => SelectMaterial(item)">✏️ Sửa</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteMaterial(item.MaterialNo)">🗑️ Xóa</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Material>? materials;
+    private Material materialForm = new Material();
+    private bool isEditMode = false;
+    private string? alertMessage;
+    private string alertClass = "success";
+
+    // Hàm tự động chạy khi trang Web được load lên
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    // Lấy toàn bộ danh sách vật tư
+    private async Task LoadData()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<ApiResponse<List<Material>>>("api/Materials");
+            if (response != null && response.ID == 200)
+            {
+                materials = response.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowAlert($"Lỗi kết nối WebService (Có thể do lỗi CORS): {ex.Message}", "danger");
+        }
+    }
+
+    // Lệnh THÊM mới vật tư
+    private async Task AddMaterial()
+    {
+        if (string.IsNullOrEmpty(materialForm.MaterialNo)) return;
+
+        var response = await Http.PostAsJsonAsync("api/Materials", materialForm);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<Material>>();
+
+        if (result?.ID == 200)
+        {
+            ShowAlert(result.Message, "success");
+            materialForm = new Material(); // Xóa sạch form
+            await LoadData(); // Re-load bảng
+        }
+    }
+
+    // Chọn dòng để SỬA
+    private void SelectMaterial(Material item)
+    {
+        materialForm = new Material
+        {
+            MaterialNo = item.MaterialNo,
+            MaterialName = item.MaterialName,
+            Unit = item.Unit
+        };
+        isEditMode = true;
+    }
+
+    // Lệnh CẬP NHẬT
+    private async Task UpdateMaterial()
+    {
+        var response = await Http.PutAsJsonAsync($"api/Materials/{materialForm.MaterialNo}", materialForm);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<Material>>();
+
+        if (result?.ID == 200)
+        {
+            ShowAlert(result.Message, "success");
+            CancelEdit();
+            await LoadData();
+        }
+    }
+
+    // Lệnh XÓA
+    private async Task DeleteMaterial(string materialNo)
+    {
+        var response = await Http.DeleteAsync($"api/Materials/{materialNo}");
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+
+        if (result?.ID == 200)
+        {
+            ShowAlert(result.Message, "success");
+            await LoadData();
+        }
+    }
+
+    private void CancelEdit()
+    {
+        materialForm = new Material();
+        isEditMode = false;
+    }
+
+    private void ShowAlert(string message, string cssClass)
+    {
+        alertMessage = message;
+        alertClass = cssClass;
+    }
+}

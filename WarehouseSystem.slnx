@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="InventoryService/InventoryService.csproj" />
+  <Project Path="MaterialService/MaterialService.csproj" />
+  <Project Path="Warehouse.Shared/Warehouse.Shared.csproj" />
+  <Project Path="WarehouseMobileApp/WarehouseMobileApp.csproj" Id="6304ad73-6cc2-4c70-a8a2-ab9d02068482" />
+  <Project Path="WarehouseWebApp/WarehouseWebApp.csproj" Id="2daf695b-b182-49ef-b58c-6ee4f35b735a" />
+  <Project Path="WarehouseWinApp/WarehouseWinApp.csproj" Id="eb7b1b53-d2b7-47a2-9a65-9185570b5233" />
+</Solution>

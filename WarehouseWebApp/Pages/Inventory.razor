@@ -1,0 +1,208 @@
+﻿@page "/inventory"
+@using Warehouse.Shared.Models
+@inject HttpClient Http
+
+<h3 class="mb-4 text-success">📦 Quản Lý Biến Động Tồn Kho (Bản Web Client)</h3>
+
+<div class="card mb-4 shadow-sm border-success">
+    <div class="card-header bg-success text-white fw-bold">➕ Khởi tạo Tồn kho cho Vật tư mới</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label fw-bold">Mã Vật Tư Mới</label>
+                <input type="text" class="form-control" @bind="newStockForm.MaterialNo" placeholder="Nhập mã vừa tạo bên Danh mục (VD: 40112)..." />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Số Lượng Nhập Kho Đầu Kỳ</label>
+                <input type="number" class="form-control" @bind="newStockForm.CurrentQuantity" placeholder="Nhập số lượng ban đầu... (VD: 100)" />
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-success w-100 fw-bold" @onclick="CreateNewStock">🚀 Khởi tạo Tồn Kho</button>
+            </div>
+        </div>
+    </div>
+</div>
+@if (stockResponse != null && stockResponse.ID == 200)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-success text-white shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-uppercase font-monospace text-white-50">Tổng số mặt hàng lưu kho</h6>
+                    <h2 class="fw-bold mb-0">@stockResponse.Data.Count</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-primary text-white shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-uppercase font-monospace text-white-50">Tổng số lượng tồn kho</h6>
+                    <h2 class="fw-bold mb-0">@stockResponse.Data.Sum(x => x.CurrentQuantity)</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(actionMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        🎉 @actionMessage
+        <button type="button" class="btn-close" @onclick="() => actionMessage = null"></button>
+    </div>
+}
+
+@if (stockResponse == null)
+{
+    <div class="d-flex align-items-center justify-content-center p-5">
+        <div class="spinner-border text-success me-2" role="status"></div>
+        <span>Đang đồng bộ dữ liệu tồn kho từ Service 7071...</span>
+    </div>
+}
+else if (stockResponse.ID != 200)
+{
+    <div class="alert alert-danger shadow-sm" role="alert">
+        ❌ Thất bại: @stockResponse.Message
+    </div>
+}
+else
+{
+    <div class="card shadow-sm rounded">
+        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+            <span>📊 Thao tác Nhập / Xuất kho nhanh</span>
+            <button class="btn btn-sm btn-light text-dark fw-bold" @onclick="RefreshStock">🔄 Làm mới</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 25%">Mã Vật Tư</th>
+                        <th style="width: 25%">Số Lượng Hiện Tại</th>
+                        <th style="width: 35%">Điều Chỉnh Số Lượng (Tăng / Giảm)</th>
+                        <th style="width: 15%">Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var stock in stockResponse.Data)
+                    {
+                        <tr>
+                            <td><strong class="text-secondary">@stock.MaterialNo</strong></td>
+                            <td><h5 class="mb-0 fw-bold text-primary">@stock.CurrentQuantity</h5></td>
+                            <td>
+                                <div class="input-group input-group-sm" style="max-width: 250px;">
+                                    <button class="btn btn-danger fw-bold" @onclick="() => AdjustStock(stock, -10)">-10</button>
+                                    <button class="btn btn-outline-danger fw-bold" @onclick="() => AdjustStock(stock, -1)">-1</button>
+
+                                    <input type="number" class="form-control text-center fw-bold"
+                                           @bind="stock.CurrentQuantity"
+                                           @bind:after="() => SaveStockDirect(stock)" />
+
+                                    <button class="btn btn-outline-success fw-bold" @onclick="() => AdjustStock(stock, 1)">+1</button>
+                                    <button class="btn btn-success fw-bold" @onclick="() => AdjustStock(stock, 10)">+10</button>
+                                </div>
+                            </td>
+                            <td>
+                                @if (stock.CurrentQuantity > 100)
+                                {
+                                    <span class="badge bg-success">An toàn</span>
+                                }
+                                else if (stock.CurrentQuantity <= 0)
+                                {
+                                    <span class="badge bg-danger">Hết hàng</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">Cần nhập thêm</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private ApiResponse<List<Stock>>? stockResponse;
+    private Stock newStockForm = new Stock(); // Form dùng để nhập mã mới
+    private string? actionMessage;
+
+    private string targetUrl = "https://localhost:7071/api/Inventory/stock";
+    private string updateUrl = "https://localhost:7071/api/Inventory/update-quantity";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStockData();
+    }
+
+    private async Task LoadStockData()
+    {
+        try
+        {
+            stockResponse = await Http.GetFromJsonAsync<ApiResponse<List<Stock>>>(targetUrl);
+        }
+        catch (Exception ex)
+        {
+            stockResponse = new ApiResponse<List<Stock>> { ID = 500, Message = ex.Message, Data = new List<Stock>() };
+        }
+    }
+
+    // ====================================================================
+    // HÀM XỬ LÝ KHỞI TẠO MÃ MỚI TOÀN DIỆN
+    // ====================================================================
+    private async Task CreateNewStock()
+    {
+        if (string.IsNullOrEmpty(newStockForm.MaterialNo)) return;
+        if (newStockForm.CurrentQuantity < 0) newStockForm.CurrentQuantity = 0;
+
+        try
+        {
+            // Bắn dữ liệu sang hàm PUT ở Backend. Backend thấy null sẽ tự động INSERT dòng mới
+            var response = await Http.PutAsJsonAsync(updateUrl, newStockForm);
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<Stock>>();
+
+            if (result?.ID == 200)
+            {
+                actionMessage = $"Khởi tạo thành công: Vật tư {newStockForm.MaterialNo} đã vào kho với số lượng {newStockForm.CurrentQuantity}!";
+                newStockForm = new Stock(); // Xóa sạch form nhập
+                await LoadStockData(); // Ép bảng bên dưới tải lại để hiển thị mã mới lên luôn
+            }
+        }
+        catch (Exception ex)
+        {
+            actionMessage = $"Lỗi kết nối: {ex.Message}";
+        }
+    }
+
+    private async Task AdjustStock(Stock item, int amount)
+    {
+        item.CurrentQuantity += amount;
+        if (item.CurrentQuantity < 0) item.CurrentQuantity = 0;
+        await SaveStockDirect(item);
+    }
+
+    private async Task SaveStockDirect(Stock item)
+    {
+        try
+        {
+            var response = await Http.PutAsJsonAsync(updateUrl, item);
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<Stock>>();
+            if (result?.ID == 200)
+            {
+                actionMessage = result.Message;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            actionMessage = $"Lỗi: {ex.Message}";
+        }
+    }
+
+    private async Task RefreshStock()
+    {
+        stockResponse = null;
+        await LoadStockData();
+    }
+}

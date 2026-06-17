@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.Maui.Controls"
+             x:Class="WarehouseMobileApp.MainPage"
+             BackgroundColor="#F3F4F6">
+
+    <Grid RowDefinitions="*, Auto, Auto" Padding="15">
+
+        <Border Grid.Row="0" StrokeShape="RoundRectangle 15" StrokeThickness="2" Stroke="Green" HeightRequest="380" VerticalOptions="Start">
+            <zxing:CameraBarcodeReaderView 
+                x:Name="barcodeReader"
+                BarcodesDetected="OnBarcodesDetected" />
+        </Border>
+
+        <VerticalStackLayout Grid.Row="1" Spacing="5" HorizontalOptions="Center" Margin="0,10,0,10">
+            <Label Text="ĐANG CHỜ QUÉT MÃ VẬT TƯ..." 
+                   x:Name="lblStatus"
+                   FontSize="15" FontAttributes="Bold" HorizontalTextAlignment="Center" TextColor="Black"/>
+            <Label Text="Số lượng tồn hiện tại:" 
+                   x:Name="lblQty"
+                   FontSize="20" FontAttributes="Bold" HorizontalTextAlignment="Center" TextColor="#22C55E" IsVisible="False"/>
+        </VerticalStackLayout>
+
+        <FlexLayout Grid.Row="2" Wrap="Wrap" JustifyContent="Center" AlignItems="Center" Direction="Row" Margin="0,5,0,5">
+            <Button Text="➕ Nhập kho (+1)" Clicked="OnAddStockClicked" BackgroundColor="#22C55E" TextColor="White" WidthRequest="130" Margin="5" CornerRadius="8"/>
+            <Button Text="🔄 Quét lại" Clicked="OnResetClicked" BackgroundColor="#3B82F6" TextColor="White" WidthRequest="110" Margin="5" CornerRadius="8"/>
+            <Button Text="🎯 Giả lập (24022)" Clicked="OnSimulateScanClicked" BackgroundColor="#9333EA" TextColor="White" WidthRequest="140" Margin="5" CornerRadius="8"/>
+        </FlexLayout>
+
+    </Grid>
+</ContentPage>
