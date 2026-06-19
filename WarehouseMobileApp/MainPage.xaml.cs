@@ -107,6 +107,47 @@ namespace WarehouseMobileApp
             }
         }
 
+        private async void OnRemoveStockClicked(object sender, EventArgs e)
+        {
+            // Nếu chưa quét hoặc chưa giả lập mã vật tư thì không làm gì cả
+            if (string.IsNullOrEmpty(currentMaterialNo)) return;
+
+            // NGHIỆP VỤ: Kiểm tra chặn xuất âm kho nếu số lượng đã bằng 0
+            if (currentQty <= 0)
+            {
+                await this.DisplayAlertAsync("Thao tác thất bại", "Số lượng vật tư trong kho đã bằng 0, không thể xuất thêm!", "OK");
+                return;
+            }
+
+            try
+            {
+                currentQty -= 1; // Giảm số lượng tồn kho đi 1 đơn vị
+                var updateDto = new Stock { MaterialNo = currentMaterialNo, CurrentQuantity = currentQty };
+
+                // Gọi API PUT đồng bộ sang cổng 5128 của InventoryService
+                string updateUrl = $"{baseApiUrl}/api/Inventory/update-quantity";
+                var response = await _http.PutAsJsonAsync(updateUrl, updateDto);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    lblQty.Text = $"Tồn kho: {currentQty} cái";
+                    await this.DisplayAlertAsync("Thành công", $"Đã xuất kho -1 cho mã vật tư {currentMaterialNo}", "OK");
+                }
+                else
+                {
+                    // Nếu API trả về lỗi, hoàn tác lại số lượng trên giao diện
+                    currentQty += 1;
+                    await this.DisplayAlertAsync("Thất bại", "Không thể cập nhật số lượng lên hệ thống!", "OK");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Nếu sập mạng hoặc lỗi API, hoàn tác lại số lượng
+                currentQty += 1;
+                await this.DisplayAlertAsync("Lỗi kết nối", ex.Message, "OK");
+            }
+        }
+
         // 3. HÀM XỬ LÝ NÚT QUÉT LẠI
         private void OnResetClicked(object sender, EventArgs e)
         {

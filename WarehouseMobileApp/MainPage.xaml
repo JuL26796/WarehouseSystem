@@ -24,6 +24,7 @@
 
         <FlexLayout Grid.Row="2" Wrap="Wrap" JustifyContent="Center" AlignItems="Center" Direction="Row" Margin="0,5,0,5">
             <Button Text="➕ Nhập kho (+1)" Clicked="OnAddStockClicked" BackgroundColor="#22C55E" TextColor="White" WidthRequest="130" Margin="5" CornerRadius="8"/>
+            <Button Text="➖ Xuất kho (-1)" Clicked="OnRemoveStockClicked" BackgroundColor="#EF4444" TextColor="White" WidthRequest="135" Margin="5" CornerRadius="8"/>
             <Button Text="🔄 Quét lại" Clicked="OnResetClicked" BackgroundColor="#3B82F6" TextColor="White" WidthRequest="110" Margin="5" CornerRadius="8"/>
             <Button Text="🎯 Giả lập (24022)" Clicked="OnSimulateScanClicked" BackgroundColor="#9333EA" TextColor="White" WidthRequest="140" Margin="5" CornerRadius="8"/>
         </FlexLayout>
